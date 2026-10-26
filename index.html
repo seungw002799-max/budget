@@ -262,10 +262,12 @@ footer.foot{display:flex;justify-content:center;padding-top:8px}
     </div>
   </section>
   </div>
-  <footer class="foot needs-api"><button class="ghost" id="resetApi">시트 연결 바꾸기</button></footer>
+  <footer class="foot" hidden><button class="ghost" id="resetApi">시트 연결 바꾸기</button></footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
+// 구글 시트 웹 앱 주소 (Apps Script 배포 URL). 바꾸려면 이 줄만 고치면 된다.
+window.BUDGET_API="https://script.google.com/macros/s/AKfycbx-jqlG2vcWedjt3MvvrDPXkqoraX7HjsPULNSBBQ5sSinv9tG9XPVGGXPkP5FNOdqR/exec";
 (function(){
 const CATS=["주거","공과금","고정","식비","생활용품","데이트·문화","경조사","의류·비상","기타"];
 const $=id=>document.getElementById(id);
