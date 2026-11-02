@@ -60,7 +60,7 @@ function sheet_(key) {
 
 function cell_(col, v) {
   if (v instanceof Date) {
-    const tz = Session.getScriptTimeZone();
+    const tz = SpreadsheetApp.getActive().getSpreadsheetTimeZone() || Session.getScriptTimeZone();
     return Utilities.formatDate(v, tz, col === 'month' ? 'yyyy-MM' : 'yyyy-MM-dd');
   }
   if (NUM_COLS.indexOf(col) >= 0) return Number(v) || 0;
