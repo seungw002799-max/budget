@@ -58,9 +58,11 @@ function sheet_(key) {
   return sh;
 }
 
+// 시트가 날짜 문자를 날짜 값으로 바꿔 저장한 경우, 시트의 시간대로 다시 문자로 만든다.
+// (스크립트 시간대로 바꾸면 하루가 밀려 11/1 기록이 10/31로 보이는 문제가 있었다)
 function cell_(col, v) {
   if (v instanceof Date) {
-    const tz = SpreadsheetApp.getActive().getSpreadsheetTimeZone() || Session.getScriptTimeZone();
+    const tz = SpreadsheetApp.getActive().getSpreadsheetTimeZone() || 'Asia/Seoul';
     return Utilities.formatDate(v, tz, col === 'month' ? 'yyyy-MM' : 'yyyy-MM-dd');
   }
   if (NUM_COLS.indexOf(col) >= 0) return Number(v) || 0;
@@ -91,6 +93,15 @@ function findRow_(sh, id) {
 
 function rowOf_(key, data) {
   return SHEETS[key].cols.map(c => (data[c] === undefined ? '' : data[c]));
+}
+
+// 한 줄을 쓰기 전에 날짜·메모 칸을 '일반 텍스트'로 지정해서, 시트가 날짜로 바꾸지 못하게 한다.
+function writeRow_(sh, key, row, data) {
+  const cols = SHEETS[key].cols;
+  cols.forEach((c, i) => {
+    if (TEXT_COLS.indexOf(c) >= 0) sh.getRange(row, i + 1).setNumberFormat('@');
+  });
+  sh.getRange(row, 1, 1, cols.length).setValues([rowOf_(key, data)]);
 }
 
 function readSettings_() {
@@ -137,13 +148,12 @@ function doPost(e) {
     if (b.action === 'settings') {
       writeSettings_(b.data);
     } else if (b.action === 'add') {
-      sheet_(b.col).appendRow(rowOf_(b.col, b.data));
+      const sh = sheet_(b.col);
+      writeRow_(sh, b.col, sh.getLastRow() + 1, b.data);
     } else if (b.action === 'upsert') {
       const sh = sheet_(b.col);
       const row = findRow_(sh, b.data.id);
-      const vals = [rowOf_(b.col, b.data)];
-      if (row > 0) sh.getRange(row, 1, 1, vals[0].length).setValues(vals);
-      else sh.appendRow(vals[0]);
+      writeRow_(sh, b.col, row > 0 ? row : sh.getLastRow() + 1, b.data);
     } else if (b.action === 'delete') {
       const sh = sheet_(b.col);
       const row = findRow_(sh, b.id);
