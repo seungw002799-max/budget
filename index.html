@@ -522,6 +522,7 @@ function normDate(v,monthOnly){
   if((m=t.match(/^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?$/)))t=m[1]+"-"+pad(m[2])+(m[3]?"-"+pad(m[3]):"");
   else if((m=t.match(/^(\d{4})[.\/년]\s*(\d{1,2})[.\/월]?\s*(?:(\d{1,2})\s*[.일]?)?\s*$/)))t=m[1]+"-"+pad(m[2])+(m[3]?"-"+pad(m[3]):"");
   else if(/^\d{4}-\d{2}-\d{2}T/.test(t)){const d=new Date(t);if(!isNaN(d))t=ymd(d)}
+  else{const d=new Date(t.replace(/\s*\(.*\)\s*$/,""));t=isNaN(d)?"":ymd(d)}
   return monthOnly?t.slice(0,7):t;
 }
 async function loadAll(quiet){
@@ -537,9 +538,11 @@ async function loadAll(quiet){
     if(seq!==loadSeq)return;
     if(pendingWrites>0){setTimeout(()=>loadAll(true),1500);return}
     S.settings=j.settings||null;
-    S.exp=(j.expenses||[]).map(e=>({...e,date:normDate(e.date),amount:+e.amount||0}));
+    const fromCreated=(v,c)=>normDate(v)||(c?ymd(new Date(+c)):"");
+    S.rawDates=(j.expenses||[]).slice(-3).map(e=>String(e.date));
+    S.exp=(j.expenses||[]).map(e=>({...e,date:fromCreated(e.date,e.createdAt),amount:+e.amount||0}));
     S.util=(j.utilities||[]).map(u=>({...u,month:normDate(u.month,true)}));
-    S.inv=(j.invest||[]).map(i=>({...i,date:normDate(i.date),amount:+i.amount||0}));
+    S.inv=(j.invest||[]).map(i=>({...i,date:fromCreated(i.date,i.createdAt),amount:+i.amount||0}));
     S.settingsLoaded=true;S.lastSync=new Date();
     $("banner").hidden=true;renderAll();renderSync();if(!quiet)toast("시트와 동기화했어요");
   }catch(e){
@@ -551,6 +554,10 @@ async function loadAll(quiet){
 function renderSync(){
   const el=$("syncInfo");if(!el||!S.lastSync)return;
   const t=S.lastSync;el.textContent="시트에서 불러온 기록: 지출 "+S.exp.length+"건 · 공과금 "+S.util.length+"건 · 투자 "+S.inv.length+"건 · "+pad(t.getHours())+":"+pad(t.getMinutes())+" 기준";
+  const by={};S.exp.forEach(e=>{const m=(e.date||"날짜없음").slice(0,7);by[m]=(by[m]||0)+1});
+  const parts=Object.keys(by).sort().map(m=>m+": "+by[m]+"건");
+  if(parts.length)el.textContent+=" ("+parts.join(", ")+")";
+  if(S.rawDates&&S.rawDates.length)el.textContent+=" · 원본 날짜 예: "+S.rawDates[0];
 }
 function showSetup(){
   $("setup").hidden=false;document.querySelectorAll(".needs-api").forEach(x=>x.hidden=true);
